@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SStudy - Subject Details</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- GLOBAL VARIABLES (ORIGINAL) --- */
+        :root {
+            --bg-sidebar: #050505; --bg-main: #0a0a0a; --bg-card: #121212;    
+            --primary: #818cf8; --primary-hover: #6366f1; --text-white: #ffffff;
+            --text-muted: #a1a1aa; --border: #1e1e1e; --sidebar-width: 260px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-white); display: flex; height: 100vh; overflow: hidden; }
+
+        /* =========================================
+           SIDEBAR (ORIGINAL)
+        ========================================= */
+        .sidebar { width: var(--sidebar-width); background-color: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px 0; }
+        .sidebar-logo { font-size: 26px; font-weight: 800; color: white; margin-bottom: 30px; padding-left: 20px; letter-spacing: -0.5px; display: flex; align-items: center; }
+        .sidebar-logo span { color: var(--primary); } 
+        .sidebar-menu { list-style: none; padding: 0 10px; display: flex; flex-direction: column; gap: 2px; }
+        .nav-link { padding: 12px 15px; margin-bottom: 5px; border-radius: 12px; display: flex; align-items: center; gap: 15px; color: var(--text-muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: 0.2s; }
+        .nav-link i { width: 20px; text-align: center; font-size: 16px; }
+        .nav-link:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+        .nav-link.active { background: rgba(99, 102, 241, 0.15); color: white; border-left: 3px solid var(--primary); border-radius: 0 12px 12px 0; margin-left: -10px; padding-left: 22px; }
+
+        /* --- CONTENT AREA --- */
+        .content { flex: 1; padding: 30px 40px; overflow-y: auto; display: flex; flex-direction: column; }
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; margin-bottom: 15px;}
+        .back-link:hover { color: var(--text-white); }
+        .subject-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+        .subject-title h1 { font-size: 32px; font-weight: 800; display: flex; align-items: center; gap: 10px; margin-bottom: 8px;}
+        .subject-title h1::before { content: "•"; color: var(--primary); font-size: 32px; }
+        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; color: white; }
+        .btn-primary { background: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        /* --- ADDED: FLASHCARDS ACCESS BAR STYLE --- */
+        .flashcard-access-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-decoration: none;
+            transition: 0.2s;
+        }
+        .flashcard-access-bar:hover {
+            border-color: var(--primary);
+            background: rgba(129, 140, 248, 0.05);
+        }
+        .fc-content { display: flex; align-items: center; gap: 15px; }
+        .fc-icon { color: var(--primary); font-size: 20px; background: rgba(129, 140, 248, 0.1); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+        .fc-info h4 { color: white; font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+        .fc-info p { color: var(--text-muted); font-size: 12px; }
+        .fc-arrow { color: var(--primary); font-size: 14px; }
+
+        /* --- TABS --- */
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-shrink: 0;}
+        .tab-btn { background: transparent; border: 1px solid #27272a; color: var(--text-muted); padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .tab-btn:hover { border-color: #3f3f46; color: white; }
+        .tab-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+        
+        /* --- VIEWS --- */
+        .view-section { display: none; animation: fadeIn 0.3s ease; flex: 1; }
+        .view-section.active-view { display: flex; flex-direction: column; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* GRADES VIEW */
+        .chart-container { background: #121212; border: 1px solid #27272a; border-radius: 12px; padding: 20px; height: 300px; margin-bottom: 30px; position: relative; }
+        .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #52525b; font-size: 14px; display: none; text-align: center;}
+        .grade-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #1e1e1e; }
+        .grade-row:last-child { border-bottom: none; }
+        .grade-info h4 { font-size: 15px; color: white; font-weight: 600; margin-bottom: 4px; }
+        .grade-info p { font-size: 12px; color: #71717a; }
+        .grade-metrics { display: flex; align-items: center; gap: 20px; }
+        .grade-metrics .score { color: var(--text-muted); font-size: 14px; }
+        .grade-metrics .percent { font-weight: 800; color: var(--primary); font-size: 18px; }
+        .btn-delete { background: none; border: none; color: #ef4444; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .btn-delete:hover { filter: brightness(1.5); transform: scale(1.1); }
+
+        /* NOTES VIEW */
+        .notes-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; height: 100%; min-height: 400px;}
+        .notes-sidebar { background: #121212; border: 1px solid #27272a; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; }
+        .notes-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .notes-header h2 { font-size: 18px; font-weight: 700; color: white; }
+        .btn-new { background: #818cf8; color: white; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-new:hover { background: #6366f1; }
+        .note-item { padding: 12px; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
+        .note-item:hover { background: rgba(255,255,255,0.05); }
+        .note-item.active-note { border-color: #27272a; background: rgba(255,255,255,0.05); }
+        .note-item h4 { color: white; font-size: 14px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .note-item p { color: #71717a; font-size: 12px; }
+        .notes-main-area { background: #121212; border: 1px solid #27272a; border-radius: 12px; padding: 30px; display: flex; flex-direction: column; position: relative; }
+        .notes-empty-text { color: #a1a1aa; font-size: 15px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+        .editor-container { display: none; flex-direction: column; height: 100%; gap: 15px; }
+        .note-title-input { background: transparent; border: none; border-bottom: 1px solid #27272a; color: white; font-size: 24px; font-weight: 700; padding: 10px 0; outline: none; }
+        .note-title-input:focus { border-color: var(--primary); }
+        .note-body-textarea { flex: 1; background: transparent; border: none; color: #d4d4d8; font-size: 15px; resize: none; outline: none; line-height: 1.6; }
+        .editor-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 15px; border-top: 1px solid #27272a; }
+
+        /* PREDICTION VIEW */
+        .prediction-card { background: #121212; border: 1px solid #27272a; border-radius: 12px; padding: 40px; display: flex; align-items: center; gap: 40px; margin-top: 20px;}
+        .pred-circle { width: 120px; height: 120px; border-radius: 50%; border: 6px solid #f472b6; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; color: #f472b6; flex-shrink: 0;}
+        .pred-details h2 { font-size: 24px; margin-bottom: 10px; }
+        .pred-details p { color: var(--text-muted); font-size: 16px; margin-bottom: 10px; line-height: 1.5; }
+
+        /* --- MODAL --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+        .modal-content { background: #121212; border: 1px solid #27272a; border-radius: 12px; width: 400px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .modal-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header-top h2 { font-size: 18px; color: #f4f4f5; font-weight: 700; }
+        .close-btn { background: none; border: none; color: #a1a1aa; font-size: 24px; cursor: pointer; }
+        .close-btn:hover { color: white; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 13px; color: #a1a1aa; margin-bottom: 6px; font-weight: 600;}
+        .input-group input, .input-group textarea { width: 100%; background: #18181b; border: 1px solid #27272a; color: white; padding: 12px; border-radius: 8px; outline: none; font-size: 14px; }
+        .input-group input:focus, .input-group textarea:focus { border-color: var(--primary); }
+        .btn-save { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn-save:hover { background: var(--primary-hover); }
+    </style>
+</head>
+<body>
+
+   <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="logo.png" alt="" style="width: 32px; height: 32px; margin-right: 12px; border-radius: 8px;" onerror="this.style.display='none'">
+            <div><span>S</span>paceStudy</div>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="dashboard.html" class="nav-link"><i class="fas fa-layer-group" style="color: #3b82f6;"></i> Dashboard</a>
+            <a href="subject.html" class="nav-link active"><i class="fas fa-book" style="color: #22c55e;"></i> Subjects</a>
+            <a href="tasks.html" class="nav-link"><i class="fas fa-check-square" style="color: #10b981;"></i> Tasks</a>
+            <a href="timer.html" class="nav-link"><i class="fas fa-stopwatch" style="color: #f43f5e;"></i> Study Timer</a>
+            <a href="analytics.html" class="nav-link"><i class="fas fa-chart-line" style="color: #818cf8;"></i> Analytics</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <a href="subject.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Subjects</a>
+
+        <div class="subject-header">
+            <div><div class="subject-title"><h1 id="subName">Loading...</h1></div></div>
+            <button class="btn btn-primary" id="addGradeBtn" onclick="openModal()"><i class="fas fa-plus"></i> Add Grade</button>
+        </div>
+
+        <a href="flashcards.html" id="flashcardLink" class="flashcard-access-bar">
+            <div class="fc-content">
+                <div class="fc-icon"><i class="fas fa-brain"></i></div>
+                <div class="fc-info">
+                    <h4>Neural Flashcards</h4>
+                    <p>Start an AI-powered active recall session for this subject.</p>
+                </div>
+            </div>
+            <div class="fc-arrow"><i class="fas fa-chevron-right"></i></div>
+        </a>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('grades', this)"><i class="fas fa-chart-bar"></i> Grades</button>
+            <button class="tab-btn" onclick="switchTab('notes', this)"><i class="fas fa-file-alt"></i> Notes</button>
+            <button class="tab-btn" onclick="switchTab('prediction', this)"><i class="fas fa-magic"></i> Prediction</button>
+        </div>
+
+        <div id="gradesView" class="view-section active-view">
+            <div class="chart-container">
+                <canvas id="vaultChart"></canvas>
+                <div id="chartEmptyText" class="empty-state">Graph will appear here when you add grades.</div>
+            </div>
+            <div id="gradesListContainer" style="overflow-y: auto;"></div>
+        </div>
+
+        <div id="notesView" class="view-section">
+            <div class="notes-layout">
+                <div class="notes-sidebar">
+                    <div class="notes-header"><h2>All Notes</h2><button class="btn-new" onclick="createNewNote()">+ New</button></div>
+                    <div id="notesListContainer"><p style="color: #71717a; font-size: 13px;">No notes yet.</p></div>
+                </div>
+                <div class="notes-main-area">
+                    <div id="noNoteSelected"><p class="notes-empty-text">Select a note to start studying or create a new one.</p></div>
+                    <div id="activeNoteEditor" class="editor-container">
+                        <input type="text" id="activeNoteTitle" class="note-title-input" placeholder="Note Title...">
+                        <textarea id="activeNoteBody" class="note-body-textarea" placeholder="Start typing your notes here..."></textarea>
+                        <div class="editor-actions">
+                            <button class="btn" style="background: #3f3f46; color: white;" onclick="deleteActiveNote()" id="btnDeleteNote">Delete</button>
+                            <button class="btn btn-primary" onclick="saveActiveNote()">Save Note</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="predictionView" class="view-section">
+            <div class="prediction-card">
+                <div class="pred-circle" id="predictedGrade">--%</div>
+                <div class="pred-details">
+                    <h2>Your Trajectory</h2>
+                    <p>Based on your past assessments, AI predicts you will score a <strong style="color:white;" id="predText">--%</strong> on your next test.</p>
+                    <div id="trendText" style="color: var(--text-muted);">Need at least 2 grades to generate a prediction.</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="gradeModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header-top"><h2>Add Grade</h2><button class="close-btn" onclick="closeModal()">&times;</button></div>
+            <div class="input-group"><label>Label / Assessment</label><input type="text" id="modalLabel" placeholder="e.g. Past paper 1"></div>
+            <div class="input-group"><label>Score</label><input type="number" id="modalScore" placeholder="e.g. 57"></div>
+            <div class="input-group"><label>Out of</label><input type="number" id="modalOutOf" value="100"></div>
+            <div class="input-group"><label>Date</label><input type="date" id="modalDate"></div>
+            <button class="btn-save" onclick="saveGrade()">Save Grade</button>
+        </div>
+    </div>
+
+    <script>
+        // --- BASE LOGIC (GRADES, NOTES, TABS) ---
+        const urlParams = new URLSearchParams(window.location.search);
+        let targetSubject = urlParams.get('sub') || "MATH"; 
+        document.getElementById('subName').innerText = targetSubject;
+
+        // Sync subject with flashcard link
+        document.getElementById('flashcardLink').href = `flashcards.html?sub=${encodeURIComponent(targetSubject)}`;
+
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active-view'));
+            document.getElementById(tabId + 'View').classList.add('active-view');
+
+            if(tabId === 'grades') {
+                document.getElementById('addGradeBtn').style.display = 'inline-flex';
+            } else {
+                document.getElementById('addGradeBtn').style.display = 'none';
+            }
+        }
+
+        let vaultChart; 
+        function getSubjectData() {
+            let subjectsList = [];
+            let rawData = localStorage.getItem('ss_user_subjects');
+            if (rawData) { try { subjectsList = JSON.parse(rawData); } catch(e) {} }
+            let sub = subjectsList.find(s => s.name === targetSubject);
+            if (!sub) { sub = { name: targetSubject, grades: [], notes: [], avg: 0 }; }
+            if (!sub.notes) sub.notes = []; 
+            if (!sub.grades) sub.grades = [];
+            sub.grades.sort((a, b) => new Date(a.date) - new Date(b.date));
+            return sub;
+        }
+
+        function saveSubjectData(updatedSub) {
+            let subjectsList = JSON.parse(localStorage.getItem('ss_user_subjects')) || [];
+            let index = subjectsList.findIndex(s => s.name === targetSubject);
+            if(updatedSub.grades.length > 0) {
+                let total = updatedSub.grades.reduce((sum, g) => sum + g.percentage, 0);
+                updatedSub.avg = Math.round(total / updatedSub.grades.length);
+            } else { updatedSub.avg = 0; }
+            if (index !== -1) { subjectsList[index] = updatedSub; } else { subjectsList.push(updatedSub); }
+            localStorage.setItem('ss_user_subjects', JSON.stringify(subjectsList));
+            renderEverything();
+        }
+
+        function renderEverything() {
+            const data = getSubjectData();
+            const listDiv = document.getElementById('gradesListContainer');
+            listDiv.innerHTML = ''; 
+            if (data.grades.length === 0) {
+                listDiv.innerHTML = '<p style="color: var(--text-muted); padding: 20px 0;">No grades logged yet. Click Add Grade to start.</p>';
+            } else {
+                [...data.grades].reverse().forEach((g, index) => {
+                    let originalIndex = data.grades.length - 1 - index; 
+                    listDiv.innerHTML += `
+                        <div class="grade-row">
+                            <div class="grade-info"><h4>${g.label}</h4><p>${g.date}</p></div>
+                            <div class="grade-metrics">
+                                <span class="score">${g.rawScore}/${g.outOf}</span><span class="percent">${g.percentage}%</span>
+                                <button class="btn-delete" onclick="deleteGrade(${originalIndex})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>`;
+                });
+            }
+            updateChart(data.grades);
+            calculatePrediction(data.grades);
+            renderNotesList(data.notes);
+        }
+
+        function updateChart(grades) {
+            const ctx = document.getElementById('vaultChart').getContext('2d');
+            const emptyText = document.getElementById('chartEmptyText');
+            if (grades.length === 0) {
+                emptyText.style.display = 'block'; 
+                if(vaultChart) { vaultChart.destroy(); vaultChart = null; }
+                return;
+            } 
+            emptyText.style.display = 'none';
+            let labels = grades.map(g => g.date);
+            let points = grades.map(g => g.percentage);
+            const grad = ctx.createLinearGradient(0, 0, 0, 300);
+            grad.addColorStop(0, 'rgba(129, 140, 248, 0.4)');
+            grad.addColorStop(1, 'rgba(129, 140, 248, 0)');
+            
+            if (vaultChart) {
+                vaultChart.data.labels = labels; vaultChart.data.datasets[0].data = points; vaultChart.update();
+            } else {
+                vaultChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: labels, datasets: [{ data: points, borderColor: '#818cf8', borderWidth: 3, backgroundColor: grad, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#818cf8', pointBorderColor: '#fff', pointBorderWidth: 2 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: '#1e1e1e' }, ticks: { color: '#52525b', stepSize: 20 } }, x: { grid: { display: false }, ticks: { color: '#52525b' } } } }
+                });
+            }
+        }
+
+        /* --- NOTES LOGIC --- */
+        let currentEditingNoteId = null;
+        function renderNotesList(notes) {
+            const container = document.getElementById('notesListContainer');
+            container.innerHTML = '';
+            if (notes.length === 0) { container.innerHTML = '<p style="color: #71717a; font-size: 13px;">No notes yet.</p>'; return; }
+            [...notes].reverse().forEach(note => {
+                const div = document.createElement('div');
+                div.className = `note-item ${currentEditingNoteId === note.id ? 'active-note' : ''}`;
+                div.onclick = () => openNote(note.id);
+                div.innerHTML = `<h4>${note.title || 'Untitled Note'}</h4><p>${note.date}</p>`;
+                container.appendChild(div);
+            });
+        }
+
+        function createNewNote() {
+            currentEditingNoteId = null;
+            document.getElementById('noNoteSelected').style.display = 'none';
+            document.getElementById('activeNoteEditor').style.display = 'flex';
+            document.getElementById('activeNoteTitle').value = '';
+            document.getElementById('activeNoteBody').value = '';
+            document.getElementById('btnDeleteNote').style.display = 'none'; 
+            renderNotesList(getSubjectData().notes);
+        }
+
+        function openNote(id) {
+            const data = getSubjectData(); const note = data.notes.find(n => n.id === id);
+            if (!note) return;
+            currentEditingNoteId = id;
+            document.getElementById('noNoteSelected').style.display = 'none';
+            document.getElementById('activeNoteEditor').style.display = 'flex';
+            document.getElementById('activeNoteTitle').value = note.title;
+            document.getElementById('activeNoteBody').value = note.body;
+            document.getElementById('btnDeleteNote').style.display = 'block';
+            renderNotesList(data.notes); 
+        }
+
+        function saveActiveNote() {
+            const title = document.getElementById('activeNoteTitle').value.trim();
+            const body = document.getElementById('activeNoteBody').value.trim();
+            if (!title && !body) { alert("Note is empty!"); return; }
+            let data = getSubjectData();
+            if (currentEditingNoteId) {
+                let noteIndex = data.notes.findIndex(n => n.id === currentEditingNoteId);
+                if (noteIndex !== -1) { data.notes[noteIndex].title = title; data.notes[noteIndex].body = body; data.notes[noteIndex].date = new Date().toLocaleDateString(); }
+            } else {
+                const newNote = { id: Date.now().toString(), title: title || 'Untitled Note', body: body, date: new Date().toLocaleDateString() };
+                data.notes.push(newNote); currentEditingNoteId = newNote.id; document.getElementById('btnDeleteNote').style.display = 'block';
+            }
+            saveSubjectData(data);
+            const btn = document.querySelector('.editor-actions .btn-primary');
+            const originalText = btn.innerText; btn.innerText = "Saved!"; setTimeout(() => { btn.innerText = originalText; }, 1500);
+        }
+
+        function deleteActiveNote() {
+            if (!currentEditingNoteId) return;
+            if (confirm("Are you sure you want to delete this note?")) {
+                let data = getSubjectData(); data.notes = data.notes.filter(n => n.id !== currentEditingNoteId);
+                currentEditingNoteId = null; document.getElementById('noNoteSelected').style.display = 'block'; document.getElementById('activeNoteEditor').style.display = 'none'; saveSubjectData(data);
+            }
+        }
+
+        /* --- PREDICTION LOGIC --- */
+        function calculatePrediction(gradesData) {
+            let grades = gradesData.map(g => g.percentage); 
+            let predDisplay = document.getElementById('predictedGrade'); let predText = document.getElementById('predText'); let trendText = document.getElementById('trendText');
+            if (grades.length < 2) {
+                predDisplay.innerText = "--%"; predText.innerText = "--%"; trendText.innerHTML = "Need at least 2 grades to generate a prediction.";
+                predDisplay.style.borderColor = "#f472b6"; predDisplay.style.color = "#f472b6"; return;
+            }
+            let last = grades[grades.length - 1]; let prev = grades[grades.length - 2];
+            let diff = last - prev; let prediction = Math.min(100, Math.max(0, last + Math.round(diff * 0.5)));
+            predDisplay.innerText = prediction + "%"; predText.innerText = prediction + "%";
+            if (prediction >= last) {
+                trendText.innerHTML = `<i class="fas fa-arrow-up"></i> Upward trend! Keep the momentum going.`; predDisplay.style.borderColor = "#4ade80"; predDisplay.style.color = "#4ade80";
+            } else {
+                trendText.innerHTML = `<i class="fas fa-arrow-down"></i> Slight dip detected.`; predDisplay.style.borderColor = "#fb7185"; predDisplay.style.color = "#fb7185";
+            }
+        }
+
+        /* --- MODAL LOGIC --- */
+        function deleteGrade(index) { if(confirm("Delete this grade?")) { let data = getSubjectData(); data.grades.splice(index, 1); saveSubjectData(data); } }
+        function openModal() { document.getElementById('gradeModal').style.display = 'flex'; document.getElementById('modalDate').value = new Date().toISOString().split('T')[0]; }
+        function closeModal() { document.getElementById('gradeModal').style.display = 'none'; document.getElementById('modalLabel').value = ''; document.getElementById('modalScore').value = ''; }
+        function saveGrade() {
+            const labelEl = document.getElementById('modalLabel'); const scoreEl = document.getElementById('modalScore'); const outOfEl = document.getElementById('modalOutOf'); const dateEl = document.getElementById('modalDate');
+            if(!labelEl || !scoreEl || !outOfEl) return;
+            const label = labelEl.value.trim(); const score = parseFloat(scoreEl.value); const outOf = parseFloat(outOfEl.value); const date = dateEl.value;
+            if (!label || isNaN(score) || isNaN(outOf)) { alert("Please fill out the Label, Score, and Out of fields."); return; }
+            let data = getSubjectData(); data.grades.push({ label: label, rawScore: score, outOf: outOf, percentage: Math.round((score/outOf)*100), date: date });
+            closeModal(); saveSubjectData(data); 
+        }
+
+        // Initialize Everything
+        renderEverything();
+    </script>
+<script src="aura-plugin.js"></script>
+</body>
+</html>

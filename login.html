@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SStudy | Secure Authentication & Onboarding</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+    <style>
+        /* SSTUDY DESIGN SYSTEM v2.0 
+           Theme: Deep Space / Obsidian
+        */
+        :root {
+            --bg-main: #020203;
+            --card-bg: #0a0a0c;
+            --card-border: #1d1d21;
+            --primary: #818cf8;
+            --primary-glow: rgba(129, 140, 248, 0.4);
+            --secondary: #6366f1;
+            --accent: #c7d2fe;
+            --text-high: #ffffff;
+            --text-mid: #94a3b8;
+            --text-low: #475569;
+            --input-fill: #121215;
+            --error: #f43f5e;
+            --success: #10b981;
+            --font-main: 'Inter', sans-serif;
+            --font-display: 'Plus Jakarta Sans', sans-serif;
+            --radius-xl: 32px;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-high);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 0% 0%, rgba(129, 140, 248, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(99, 102, 241, 0.08) 0%, transparent 40%);
+        }
+
+        /* Ambient Background Elements */
+        .ambient-light {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: var(--primary);
+            filter: blur(150px);
+            opacity: 0.1;
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .top-left { top: -100px; left: -100px; }
+        .bottom-right { bottom: -100px; right: -100px; }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 24px;
+            perspective: 1000px;
+        }
+
+        /* Auth Card Core */
+        .auth-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-xl);
+            padding: 56px;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);
+            position: relative;
+            backdrop-filter: blur(10px);
+            transition: var(--transition);
+        }
+
+        /* Header Branding */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-container {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 24px -6px var(--primary-glow);
+            transform-style: preserve-3d;
+            transition: var(--transition);
+        }
+
+        .logo-container:hover {
+            transform: rotateY(180deg) scale(1.05);
+        }
+
+        .logo-icon {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 36px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            color: var(--text-high);
+        }
+
+        .logo-text span {
+            color: var(--primary);
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .description {
+            color: var(--text-mid);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        /* Form Controls */
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: var(--transition);
+        }
+
+        .input-wrap {
+            position: relative;
+            text-align: left;
+        }
+
+        .input-wrap label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-low);
+            margin-bottom: 8px;
+            padding-left: 4px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--input-fill);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            color: var(--text-high);
+            font-size: 16px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.15);
+            background: #16161a;
+        }
+
+        .grid-half {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* Action Button */
+        .btn-submit {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            padding: 18px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 10px;
+            box-shadow: 0 10px 30px -10px var(--primary-glow);
+        }
+
+        .btn-submit:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px -10px var(--primary-glow);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Loader Animation */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* OTP Block */
+        .otp-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .otp-box {
+            width: 100%;
+            max-width: 280px;
+            text-align: center;
+            font-size: 36px;
+            letter-spacing: 14px;
+            font-weight: 900;
+            padding: 18px;
+            border: 2px solid var(--card-border);
+            border-radius: var(--radius-lg);
+            background: #000;
+        }
+
+        /* Toggle & Link */
+        .footer-note {
+            margin-top: 32px;
+            font-size: 14px;
+            color: var(--text-mid);
+            text-align: center;
+        }
+
+        .text-link {
+            color: var(--primary);
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            margin-left: 4px;
+            transition: 0.2s;
+        }
+
+        .text-link:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        /* Visual Feedback */
+        .hidden { display: none !important; }
+        
+        .error-msg {
+            color: var(--error);
+            font-size: 12px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 12px 24px;
+            border-radius: 100px;
+            font-size: 14px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            z-index: 1000;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .toast.show { opacity: 1; bottom: 50px; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in { animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+
+    </style>
+</head>
+<body>
+
+    <div class="ambient-light top-left"></div>
+    <div class="ambient-light bottom-right"></div>
+
+    <div class="container">
+        <div class="auth-card" id="main-card">
+            
+            <div class="header">
+                <div class="logo-container">
+                    <span class="logo-icon">S</span>
+                </div>
+                <div class="logo-text">S<span>Study</span></div>
+            </div>
+
+            <div id="login-view" class="animate-in">
+                <h1>Welcome Back</h1>
+                <p class="description">Enter your email to receive a secure authentication code to access your dashboard.</p>
+                
+                <div class="form-section">
+                    <div class="input-wrap">
+                        <label>Educational Email</label>
+                        <input type="email" id="login-email" class="input-field" placeholder="name@school.com">
+                        <div id="login-error" class="error-msg">Please enter a valid email address.</div>
+                    </div>
+                    
+                    <button class="btn-submit" onclick="attemptAuth('login')">
+                        <span class="spinner" id="spinner-login"></span>
+                        <span id="label-login">Send Secure Code</span>
+                    </button>
+                </div>
+
+                <div class="footer-note">
+                    New to SStudy? <span class="text-link" onclick="toggleMode('signup')">Get Started</span>
+                </div>
+            </div>
+
+            <div id="signup-view" class="hidden">
+                <h1>Join SStudy</h1>
+                <p class="description">Create your profile to start tracking your academic performance and productivity.</p>
+                
+                <div class="form-section">
+                    <div class="input-wrap">
+                        <label>Full Name</label>
+                        <input type="text" id="reg-name" class="input-field" placeholder="Muhamed Olamide">
+                    </div>
+
+                    <div class="grid-half">
+                        <div class="input-wrap">
+                            <label>Age</label>
+                            <input type="number" id="reg-age" class="input-field" placeholder="18">
+                        </div>
+                        <div class="input-wrap">
+                            <label>Country</label>
+                            <input type="text" id="reg-country" class="input-field" placeholder="Nigeria">
+                        </div>
+                    </div>
+
+                    <div class="input-wrap">
+                        <label>Current School</label>
+                        <input type="text" id="reg-school" class="input-field" placeholder="Global Excellence High">
+                    </div>
+
+                    <div class="input-wrap">
+                        <label>Email Address</label>
+                        <input type="email" id="reg-email" class="input-field" placeholder="name@email.com">
+                    </div>
+
+                    <button class="btn-submit" onclick="attemptAuth('signup')">
+                        <span class="spinner" id="spinner-signup"></span>
+                        <span id="label-signup">Create My Account</span>
+                    </button>
+                </div>
+
+                <div class="footer-note">
+                    Already have an account? <span class="text-link" onclick="toggleMode('login')">Login</span>
+                </div>
+            </div>
+
+            <div id="verify-view" class="hidden animate-in">
+                <h1>Secure Verification</h1>
+                <p class="description">A 4-digit code has been dispatched to <strong id="sent-to" style="color:var(--primary)"></strong>. It will expire in 10 minutes.</p>
+                
+                <div class="form-section">
+                    <div class="otp-group">
+                        <input type="text" id="otp-input" class="otp-box" maxlength="4" placeholder="••••">
+                    </div>
+                    
+                    <button class="btn-submit" onclick="finalizeAuth()">
+                        <span>Verify & Continue</span>
+                    </button>
+
+                    <div class="footer-note" style="margin-top:15px; cursor:pointer;" onclick="location.reload()">
+                        Didn't get a code? <span class="text-link">Try again</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        /**
+         * SSTUDY AUTH ENGINE v2.0
+         * Handles persistent database logic and secure mailing
+         */
+        
+        // 1. Initialize EmailJS
+        (function() {
+            emailjs.init("T2ZawBceL_IsG0MW3");
+        })();
+
+        // 2. Client-Side Database (Persistence Layer)
+        const SStudyDB = {
+            getUsers: () => JSON.parse(localStorage.getItem('sstudy_users')) || [],
+            saveUser: (user) => {
+                const users = SStudyDB.getUsers();
+                const index = users.findIndex(u => u.email === user.email);
+                if (index === -1) users.push(user);
+                else users[index] = {...users[index], ...user};
+                localStorage.setItem('sstudy_users', JSON.stringify(users));
+            },
+            findUser: (email) => SStudyDB.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase()),
+            setSession: (user) => localStorage.setItem('sstudy_session', JSON.stringify(user))
+        };
+
+        // 3. State Management
+        let currentFlow = 'login';
+        let generatedOTP = null;
+        let pendingData = null;
+
+        // 4. View Controllers
+        function toggleMode(mode) {
+            currentFlow = mode;
+            const card = document.getElementById('main-card');
+            card.style.opacity = '0';
+            
+            setTimeout(() => {
+                document.getElementById('login-view').classList.toggle('hidden', mode !== 'login');
+                document.getElementById('signup-view').classList.toggle('hidden', mode !== 'signup');
+                document.getElementById('verify-view').classList.add('hidden');
+                card.style.opacity = '1';
+                
+                // If coming from a failed login attempt, populate email
+                if(mode === 'signup' && pendingData && pendingData.email) {
+                    document.getElementById('reg-email').value = pendingData.email;
+                }
+            }, 300);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // 5. Auth Logic
+        async function attemptAuth(type) {
+            const email = document.getElementById(type === 'login' ? 'login-email' : 'reg-email').value.toLowerCase().trim();
+            const loader = document.getElementById(`spinner-${type}`);
+            const label = document.getElementById(`label-${type}`);
+
+            if (!email || !email.includes('@')) {
+                showToast("Please provide a valid email.");
+                return;
+            }
+
+            // Database Check for Login
+            if (type === 'login') {
+                const userExists = SStudyDB.findUser(email);
+                if (!userExists) {
+                    showToast("Email not found. Redirecting to signup...");
+                    pendingData = { email: email };
+                    setTimeout(() => toggleMode('signup'), 1500);
+                    return;
+                }
+                pendingData = userExists;
+            } else {
+                // Signup Data Collection
+                const name = document.getElementById('reg-name').value.trim();
+                const age = document.getElementById('reg-age').value.trim();
+                const country = document.getElementById('reg-country').value.trim();
+                const school = document.getElementById('reg-school').value.trim();
+
+                if (!name || !school) {
+                    showToast("All fields are required for new accounts.");
+                    return;
+                }
+                pendingData = { name, age, country, school, email, joined: new Date().toISOString() };
+            }
+
+            // OTP Generation (Range: 8000 to 9999)
+            generatedOTP = Math.floor(8000 + Math.random() * 1999);
+            console.log("System Security Code:", generatedOTP);
+
+            // UI Feedback
+            loader.style.display = 'inline-block';
+            label.innerText = "Processing...";
+
+            try {
+                // Dispatch Mail via EmailJS
+                await emailjs.send("service_lpnq6vb", "template_uosbq6v", {
+                    email: email,
+                    passcode: generatedOTP,
+                    time: "10 minutes"
+                });
+
+                // Success State
+                document.getElementById('sent-to').innerText = email;
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('signup-view').classList.add('hidden');
+                document.getElementById('verify-view').classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                showToast("Email Service Interrupted. Try again later.");
+                label.innerText = type === 'login' ? "Send Secure Code" : "Create My Account";
+                loader.style.display = 'none';
+            }
+        }
+
+        async function finalizeAuth() {
+            const userInput = document.getElementById('otp-input').value;
+
+            if (userInput == generatedOTP) {
+                showToast("Identity Verified. Entering Dashboard...");
+                
+                // Update DB and Session
+                SStudyDB.saveUser(pendingData);
+                SStudyDB.setSession(pendingData);
+
+                // Initialize Academic Streak
+                if (!localStorage.getItem('sstudy_streak')) {
+                    localStorage.setItem('sstudy_streak', "1");
+                }
+
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1200);
+            } else {
+                showToast("Invalid code. Please verify and re-enter.");
+                document.getElementById('otp-input').style.borderColor = 'var(--error)';
+                setTimeout(() => {
+                    document.getElementById('otp-input').style.borderColor = 'var(--card-border)';
+                }, 1000);
+            }
+        }
+
+        // Accessibility: Enter Key Support
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (!document.getElementById('verify-view').classList.contains('hidden')) finalizeAuth();
+                else if (!document.getElementById('login-view').classList.contains('hidden')) attemptAuth('login');
+                else if (!document.getElementById('signup-view').classList.contains('hidden')) attemptAuth('signup');
+            }
+        });
+    </script>
+</body>
+</html>

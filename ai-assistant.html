@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SStudy - AI Assistant</title>
+    <link rel="icon" type="image/svg" href="logo.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }
+      };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-sidebar: #000000;
+            --bg-main: #0a0a0a;
+            --bg-input: #212121;
+            --bg-card: #171717;
+            --text-white: #ffffff;
+            --text-muted: #b3b3b3;
+            --border-color: #2a2a2a;
+            --primary: #818cf8;
+            --primary-hover: #6366f1;
+            --math-color: #f43f5e;
+            --sidebar-width: 260px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-white); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: var(--sidebar-width); background-color: var(--bg-sidebar); display: flex; flex-direction: column; padding: 25px 0; border-right: 1px solid var(--border-color); }
+        .sidebar-logo { font-size: 26px; font-weight: 800; color: white; margin-bottom: 30px; padding-left: 20px; letter-spacing: -0.5px; }
+        .sidebar-logo span { color: var(--primary); }
+        .sidebar-menu { list-style: none; display: flex; flex-direction: column; gap: 2px; margin-bottom: 20px; padding: 0 10px; }
+        .nav-link { display: flex; align-items: center; gap: 15px; padding: 12px 15px; color: var(--text-muted); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 12px; transition: 0.2s; margin-bottom: 5px; }
+        .nav-link i { width: 20px; text-align: center; font-size: 16px; }
+        .nav-link:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+        .nav-link.active { background: rgba(99, 102, 241, 0.15); color: white; border-left: 3px solid var(--primary); border-radius: 0 12px 12px 0; margin-left: -10px; padding-left: 22px; }
+        .divider { height: 1px; background: var(--border-color); margin: 10px 20px 20px 20px; border: none; }
+        .chat-section { display: flex; flex-direction: column; flex: 1; overflow: hidden; padding: 0 10px; }
+        .new-chat-btn { background: transparent; color: var(--text-white); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 15px; text-align: left; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; margin-bottom: 20px; }
+        .new-chat-btn:hover { background: rgba(255,255,255,0.05); }
+        
+        .recent-header { font-size: 11px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; margin-bottom: 10px; padding-left: 10px; text-transform: uppercase; }
+        
+        .chat-list { flex: 1; overflow-y: auto; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+        
+        .chat-item { position: relative; padding: 12px 10px; border-radius: 8px; color: var(--text-muted); font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
+        .chat-item:hover { background: rgba(255,255,255,0.05); color: var(--text-white); }
+        .chat-item.active { background: rgba(255,255,255,0.1); color: var(--text-white); }
+        .chat-title-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+        
+        .delete-btn { display: none; background: transparent; border: none; color: #ef4444; cursor: pointer; padding: 5px; border-radius: 6px; font-size: 12px; transition: 0.2s; }
+        .chat-item:hover .delete-btn { display: flex; align-items: center; justify-content: center; }
+        .delete-btn:hover { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        /* --- MAIN CONTENT & HEADER --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; }
+        
+        .top-header { display: flex; justify-content: center; padding: 15px; border-bottom: 1px solid var(--border-color); background: rgba(10,10,10,0.8); backdrop-filter: blur(10px); position: absolute; width: 100%; top: 0; z-index: 10; }
+        .mode-toggle { display: flex; background: var(--bg-input); border-radius: 12px; padding: 4px; border: 1px solid var(--border-color); }
+        .mode-btn { background: transparent; border: none; color: var(--text-muted); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+        .mode-btn.active-general { background: var(--primary); color: white; }
+        .mode-btn.active-math { background: var(--math-color); color: white; }
+
+        /* --- EMPTY STATE --- */
+        .welcome-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; max-width: 800px; margin: 0 auto; width: 100%; margin-top: 60px; }
+        .ai-logo-large { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 25px; transition: 0.3s; }
+        .ai-logo-large.general { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+        .ai-logo-large.math { background: rgba(244, 63, 94, 0.15); color: var(--math-color); }
+        .welcome-screen h1 { font-size: 32px; font-weight: 700; margin-bottom: 15px; text-align: center; }
+        .welcome-screen p { color: var(--text-muted); font-size: 16px; margin-bottom: 40px; text-align: center; }
+        .suggestions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+        .suggestion-card { background: transparent; border: 1px solid var(--border-color); padding: 18px 20px; border-radius: 12px; color: var(--text-muted); font-size: 14px; text-align: left; cursor: pointer; transition: 0.2s; }
+        .suggestion-card:hover { background: rgba(255,255,255,0.05); border-color: #404040; color: white; }
+
+        /* --- CHAT AREA --- */
+        .chat-container { flex: 1; overflow-y: auto; padding: 80px 0 140px 0; display: none; flex-direction: column; }
+        .message-wrapper { padding: 20px; display: flex; justify-content: center; }
+        .message-wrapper.user-wrapper { background: transparent; }
+        .message-wrapper.ai-wrapper { background: rgba(255,255,255,0.02); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+        .message { max-width: 800px; width: 100%; display: flex; gap: 20px; font-size: 15px; line-height: 1.6; }
+        .avatar { width: 30px; height: 30px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .avatar.user { background: #333; }
+        .avatar.ai.general { background: rgba(99, 102, 241, 0.2); color: var(--primary); }
+        .avatar.ai.math { background: rgba(244, 63, 94, 0.2); color: var(--math-color); }
+        .message-content { flex: 1; color: #ececec; }
+        .message-content p { margin-bottom: 15px; }
+        .message-content p:last-child { margin-bottom: 0; }
+        .message-content pre { background: #1a1a1a; padding: 15px; border-radius: 8px; overflow-x: auto; margin: 10px 0; }
+        .message-content code { background: #1a1a1a; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+        .message-content img { max-width: 300px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border-color); }
+
+        /* --- INPUT BAR --- */
+        .input-area { position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 20px; background: linear-gradient(180deg, rgba(10,10,10,0) 0%, rgba(10,10,10,1) 30%); display: flex; justify-content: center; flex-direction: column; align-items: center;}
+        
+        .image-preview-container { max-width: 800px; width: 100%; display: none; margin-bottom: 10px; padding: 0 15px; }
+        .image-preview { position: relative; display: inline-block; }
+        .image-preview img { height: 60px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .remove-img-btn { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .input-box { max-width: 800px; width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 16px; padding: 12px 15px; display: flex; align-items: flex-end; gap: 10px; }
+        
+        .upload-label { color: #6b6b6b; cursor: pointer; padding: 8px; transition: 0.2s; margin-bottom: 2px; border-radius: 8px;}
+        .upload-label:hover { color: white; background: rgba(255,255,255,0.05); }
+        
+        .chat-input { flex: 1; background: transparent; border: none; color: white; font-size: 15px; padding: 8px 0; resize: none; max-height: 200px; outline: none; line-height: 1.5; }
+        .chat-input::placeholder { color: #6b6b6b; }
+        .send-btn { background: var(--primary); color: white; border: none; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; margin-bottom: 2px; }
+        .send-btn:hover { background: var(--primary-hover); }
+        .send-btn:disabled { background: #404040; color: #808080; cursor: not-allowed; }
+        .loading-dots { display: none; color: var(--text-muted); font-size: 14px; margin-top: 10px; text-align: center;}
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-logo" style="display: flex; align-items: center;">
+            <img src="logo.png" alt="SpaceStudy Logo" style="width: 32px; height: 32px; margin-right: 12px; border-radius: 8px;" onerror="this.style.display='none'">
+            <div><span>S</span>paceStudy</div>
+        </div>
+        
+        <nav class="sidebar-menu">
+            <a href="dashboard.html" class="nav-link"><i class="fas fa-layer-group" style="color: #3b82f6;"></i> Dashboard</a>
+            <a href="subject.html" class="nav-link"><i class="fas fa-book" style="color: #22c55e;"></i> Subjects</a>
+            <a href="ai-assistant.html" class="nav-link active"><i class="fas fa-robot" style="color: #ec4899;"></i> AI Assistant</a>
+            <a href="tasks.html" class="nav-link"><i class="fas fa-check-square" style="color: #10b981;"></i> Tasks</a>
+            <a href="timer.html" class="nav-link"><i class="fas fa-stopwatch" style="color: #f43f5e;"></i> Study Timer</a>
+            <a href="analytics.html" class="nav-link"><i class="fas fa-chart-line" style="color: #818cf8;"></i> Analytics</a>
+        </nav>
+
+        <hr class="divider">
+
+        <div class="chat-section">
+            <button class="new-chat-btn" onclick="startNewChat()">
+                <i class="fas fa-plus"></i> New chat
+            </button>
+            <div class="recent-header" id="sidebarHeader">RECENT CHATS</div>
+            <ul class="chat-list" id="chatList"></ul>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        
+        <div class="top-header">
+            <div class="mode-toggle">
+                <button id="btnGeneral" class="mode-btn active-general" onclick="switchMode('general')"><i class="fas fa-brain"></i> General AI</button>
+                <button id="btnMath" class="mode-btn" onclick="switchMode('math')"><i class="fas fa-square-root-variable"></i> Math Solver</button>
+            </div>
+        </div>
+
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="ai-logo-large general" id="welcomeLogo"><i class="fas fa-robot"></i></div>
+            <h1 id="welcomeTitle">How can I help you study today?</h1>
+            <p id="welcomeSubtitle">Ask me anything, upload your notes/diagrams, or request essay help and exam tips.</p>
+            
+            <div class="suggestions-grid" id="suggestionGrid">
+                <button class="suggestion-card" onclick=""></button>
+                <button class="suggestion-card" onclick=""></button>
+                <button class="suggestion-card" onclick=""></button>
+                <button class="suggestion-card" onclick=""></button>
+            </div>
+        </div>
+
+        <div class="chat-container" id="chatContainer"></div>
+
+        <div class="input-area">
+            <div class="image-preview-container" id="imagePreviewContainer">
+                <div class="image-preview">
+                    <img id="previewImg" src="" alt="Upload Preview">
+                    <button class="remove-img-btn" onclick="removeImage()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <div style="width: 100%; max-width: 800px; display: flex; flex-direction: column;">
+                <div class="input-box">
+                    <label for="imageUpload" class="upload-label">
+                        <i class="fas fa-image"></i>
+                    </label>
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+                    
+                    <textarea id="chatInput" class="chat-input" rows="1" placeholder="Message SStudy AI..." oninput="autoResize(this)" onkeypress="handleEnter(event)"></textarea>
+                    <button id="sendBtn" class="send-btn" onclick="handleSend()"><i class="fas fa-arrow-up"></i></button>
+                </div>
+                <div id="loadingIndicator" class="loading-dots">Connecting to SStudy AI...</div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        // PASTE YOUR BRAND NEW KEY HERE:
+        const GEMINI_API_KEY = "AIzaSyCSgcuz4mWL50uiBUDCMTlTC2uZI9gBGjg"; 
+        // ==========================================
+
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const chatContainer = document.getElementById('chatContainer');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const chatList = document.getElementById('chatList');
+        const sidebarHeader = document.getElementById('sidebarHeader');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const btnGeneral = document.getElementById('btnGeneral');
+        const btnMath = document.getElementById('btnMath');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const previewImg = document.getElementById('previewImg');
+        const welcomeLogo = document.getElementById('welcomeLogo');
+        const welcomeTitle = document.getElementById('welcomeTitle');
+        const welcomeSubtitle = document.getElementById('welcomeSubtitle');
+
+        // State Management 
+        let chats = JSON.parse(localStorage.getItem('sstudy_ai_chats')) || [];
+        chats.forEach(c => { if (!c.mode) c.mode = 'general'; });
+
+        let currentChatId = null;
+        let currentMode = 'general'; 
+        
+        let attachedImageBase64 = null;
+        let attachedImageMimeType = null;
+
+        // --- STUDY PROMPTS ---
+        const generalPrompts = [
+            "Explain the nitrogen cycle", "Mitosis vs meiosis", "Causes of World War I", 
+            "IGCSE Chemistry questions", "How does photosynthesis work?", "Summarize Hamlet in 3 paragraphs",
+            "How to write a DBQ essay", "Explain quantum entanglement"
+        ];
+        
+        const mathPrompts = [
+            "Integration by parts", "Practice questions for AP Calculus", "Trigonometry identities cheat sheet", 
+            "What is the Pythagorean theorem?", "How to solve quadratic equations", "Explain limits in Calculus",
+            "Matrix multiplication guide", "Solve for x: 3x + 5 = 20"
+        ];
+
+        window.onload = () => {
+            switchMode('general', false); 
+        };
+
+        // --- MODE SWITCHING ---
+        function switchMode(mode, forceNewChat = false) {
+            currentMode = mode;
+            
+            if (mode === 'general') {
+                btnGeneral.className = 'mode-btn active-general';
+                btnMath.className = 'mode-btn';
+                sendBtn.style.backgroundColor = 'var(--primary)';
+                sidebarHeader.innerText = "GENERAL CHATS";
+                
+                welcomeLogo.className = 'ai-logo-large general';
+                welcomeLogo.innerHTML = '<i class="fas fa-robot"></i>';
+                welcomeTitle.innerText = 'How can I help you study today?';
+                welcomeSubtitle.innerText = 'Ask me anything, upload your notes/diagrams, or request essay help and exam tips.';
+                randomizeSuggestions(generalPrompts);
+            } else {
+                btnGeneral.className = 'mode-btn';
+                btnMath.className = 'mode-btn active-math';
+                sendBtn.style.backgroundColor = 'var(--math-color)';
+                sidebarHeader.innerText = "MATH SOLVER CHATS";
+                
+                welcomeLogo.className = 'ai-logo-large math';
+                welcomeLogo.innerHTML = '<i class="fas fa-square-root-variable"></i>';
+                welcomeTitle.innerText = 'Drop your math problems here.';
+                welcomeSubtitle.innerText = 'Upload a picture of an equation, or type it out. I will break it down step-by-step.';
+                randomizeSuggestions(mathPrompts);
+            }
+
+            renderSidebar();
+            
+            const filteredChats = chats.filter(c => c.mode === currentMode);
+            if (forceNewChat || filteredChats.length === 0) {
+                startNewChat();
+            } else {
+                selectChat(filteredChats[0].id);
+            }
+        }
+
+        function randomizeSuggestions(promptList) {
+            const shuffled = [...promptList].sort(() => 0.5 - Math.random());
+            const selectedPrompts = shuffled.slice(0, 4);
+            const buttons = document.querySelectorAll('.suggestion-card');
+            buttons.forEach((btn, index) => {
+                if (selectedPrompts[index]) {
+                    btn.textContent = selectedPrompts[index];
+                    btn.onclick = () => sendSuggestion(selectedPrompts[index]);
+                }
+            });
+        }
+
+        // --- CHAT DELETION ---
+        function deleteChat(id, event) {
+            event.stopPropagation();
+            
+            if (confirm("Are you sure you want to delete this chat?")) {
+                chats = chats.filter(c => c.id !== id);
+                localStorage.setItem('sstudy_ai_chats', JSON.stringify(chats));
+                
+                if (currentChatId === id) {
+                    startNewChat();
+                } else {
+                    renderSidebar(); 
+                }
+            }
+        }
+
+        // --- IMAGE HANDLING ---
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fullBase64 = e.target.result;
+                attachedImageBase64 = fullBase64.split(',')[1];
+                attachedImageMimeType = file.type;
+
+                previewImg.src = fullBase64;
+                imagePreviewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeImage() {
+            attachedImageBase64 = null;
+            attachedImageMimeType = null;
+            imagePreviewContainer.style.display = 'none';
+            document.getElementById('imageUpload').value = ''; 
+        }
+
+        // --- UI UTILS ---
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight < 200 ? textarea.scrollHeight : 200) + 'px';
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        }
+
+        function scrollToBottom() { chatContainer.scrollTop = chatContainer.scrollHeight; }
+
+        function startNewChat() {
+            currentChatId = null;
+            chatContainer.style.display = 'none';
+            chatContainer.innerHTML = '';
+            welcomeScreen.style.display = 'flex';
+            
+            if (currentMode === 'general') randomizeSuggestions(generalPrompts);
+            else randomizeSuggestions(mathPrompts);
+
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+            removeImage();
+            renderSidebar();
+        }
+
+        function selectChat(id) {
+            currentChatId = id;
+            welcomeScreen.style.display = 'none';
+            chatContainer.style.display = 'flex';
+            
+            const chat = chats.find(c => c.id === id);
+            renderMessages(chat.messages);
+            renderSidebar(); 
+            scrollToBottom();
+        }
+
+        function renderSidebar() {
+            chatList.innerHTML = '';
+            const filteredChats = chats.filter(c => c.mode === currentMode);
+            
+            filteredChats.forEach(chat => {
+                const li = document.createElement('li');
+                li.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+                li.onclick = () => selectChat(chat.id);
+                
+                const icon = chat.mode === 'math' ? '<i class="fas fa-calculator" style="color:var(--math-color)"></i>' : '<i class="far fa-comment-alt"></i>';
+                
+                li.innerHTML = `
+                    <div class="chat-title-text">${icon} ${chat.title}</div>
+                    <button class="delete-btn" title="Delete Chat" onclick="deleteChat('${chat.id}', event)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                
+                chatList.appendChild(li);
+            });
+        }
+
+        function renderMessages(messages) {
+            chatContainer.innerHTML = '';
+            messages.forEach(msg => {
+                appendMessageToUI(msg.role, msg.content, msg.imageSrc, msg.mode);
+            });
+        }
+
+        function appendMessageToUI(role, text, imageSrc = null, msgMode = 'general') {
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${role === 'user' ? 'user-wrapper' : 'ai-wrapper'}`;
+            
+            const aiAvatarClass = msgMode === 'math' ? 'avatar ai math' : 'avatar ai general';
+            const aiAvatarIcon = msgMode === 'math' ? 'fa-square-root-variable' : 'fa-robot';
+
+            const avatarHtml = role === 'user' 
+                ? `<div class="avatar user"><i class="fas fa-user" style="font-size:12px;"></i></div>`
+                : `<div class="${aiAvatarClass}"><i class="fas ${aiAvatarIcon}" style="font-size:14px;"></i></div>`;
+
+            let formattedText = text;
+            if (typeof marked !== 'undefined' && role === 'ai') {
+                formattedText = marked.parse(text); 
+            } else {
+                formattedText = text.replace(/\n/g, '<br>');
+            }
+
+            const imageHtml = imageSrc ? `<img src="${imageSrc}" alt="User Upload"><br>` : '';
+
+            wrapper.innerHTML = `
+                <div class="message">
+                    ${avatarHtml}
+                    <div class="message-content">${imageHtml}${formattedText}</div>
+                </div>
+            `;
+            chatContainer.appendChild(wrapper);
+
+            if (window.MathJax) {
+                MathJax.typesetPromise([wrapper]).catch((err) => console.log('MathJax error:', err));
+            }
+            scrollToBottom();
+        }
+
+        function sendSuggestion(text) {
+            chatInput.value = text;
+            handleSend();
+        }
+
+        // --- GEMINI API LOGIC ---
+        async function handleSend() {
+            const text = chatInput.value.trim();
+            if (!text && !attachedImageBase64) return;
+
+            const fallbackText = currentMode === 'math' 
+                ? "Please solve the problem in the attached image." 
+                : "Please analyze the attached image.";
+            const messageText = text || fallbackText;
+            
+            const base64Data = attachedImageBase64;
+            const mimeType = attachedImageMimeType;
+            const displayImageSrc = base64Data ? `data:${mimeType};base64,${base64Data}` : null;
+
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            sendBtn.disabled = true;
+            removeImage();
+
+            if (!currentChatId) {
+                currentChatId = Date.now().toString();
+                chats.unshift({
+                    id: currentChatId,
+                    mode: currentMode,
+                    title: messageText.substring(0, 30) + (messageText.length > 30 ? '...' : ''),
+                    messages: []
+                });
+                welcomeScreen.style.display = 'none';
+                chatContainer.style.display = 'flex';
+                renderSidebar();
+            }
+
+            const currentChat = chats.find(c => c.id === currentChatId);
+
+            const userMsgObj = { role: 'user', content: messageText, imageSrc: displayImageSrc };
+            if (base64Data) {
+                userMsgObj.apiImageData = { mimeType: mimeType, data: base64Data };
+            }
+
+            currentChat.messages.push(userMsgObj);
+            appendMessageToUI('user', messageText, displayImageSrc, currentMode);
+            localStorage.setItem('sstudy_ai_chats', JSON.stringify(chats));
+
+            loadingIndicator.style.display = 'block';
+
+            const mathInstruction = "You are a world-class math tutor. Break down complex mathematical problems step-by-step. Use LaTeX for all mathematical formatting. Explain your reasoning clearly at every step so the student learns the 'why', not just the 'how'. If the user uploads an image of a math problem, analyze it carefully and solve it.";
+            const generalInstruction = "You are SStudy AI, a helpful, encouraging study assistant. You can analyze images, diagrams, or notes the user uploads. Keep answers clear and educational. Use markdown to format responses nicely. Use LaTeX for math if needed.";
+            const activeInstruction = currentMode === 'math' ? mathInstruction : generalInstruction;
+
+            let cleanGeminiHistory = [];
+            currentChat.messages.forEach(m => {
+                let role = m.role === 'ai' ? 'model' : 'user';
+                let partsArray = [];
+                if (m.content) partsArray.push({ text: m.content });
+                if (m.apiImageData) partsArray.push({ inlineData: { mimeType: m.apiImageData.mimeType, data: m.apiImageData.data } });
+                
+                if (cleanGeminiHistory.length > 0 && cleanGeminiHistory[cleanGeminiHistory.length - 1].role === role) {
+                    cleanGeminiHistory[cleanGeminiHistory.length - 1].parts.push(...partsArray);
+                } else {
+                    cleanGeminiHistory.push({ role: role, parts: partsArray });
+                }
+            });
+
+            try {
+                // USING GEMINI 2.5 FLASH AS PROMISED
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        systemInstruction: { parts: [{ text: activeInstruction }] },
+                        contents: cleanGeminiHistory
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+                }
+
+                const data = await response.json();
+                const aiResponseText = data.candidates[0].content.parts[0].text;
+
+                currentChat.messages.push({ role: 'ai', content: aiResponseText, mode: currentMode });
+                appendMessageToUI('ai', aiResponseText, null, currentMode);
+                localStorage.setItem('sstudy_ai_chats', JSON.stringify(chats));
+
+            } catch (error) {
+                console.error("Gemini Fetch Error:", error);
+                appendMessageToUI('ai', `⚠️ Error connecting to AI: ${error.message}.`, null, currentMode);
+                currentChat.messages.pop(); 
+                localStorage.setItem('sstudy_ai_chats', JSON.stringify(chats));
+            } finally {
+                loadingIndicator.style.display = 'none';
+                sendBtn.disabled = false;
+                scrollToBottom();
+                chatInput.focus();
+            }
+        }
+    </script>
+<script src="aura-plugin.js"></script>
+</body>
+</html>

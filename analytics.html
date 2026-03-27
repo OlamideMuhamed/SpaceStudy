@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="db.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SStudy - Analytics</title>
+    <link rel="icon" type="image/svg" href="logo.svg">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- BASE THEME COLORS --- */
+        :root {
+            --bg-sidebar: #050505; 
+            --bg-main: #0a0a0a;    
+            --bg-card: #121212;    
+            --primary: #6366f1;    
+            --text-white: #ffffff;
+            --text-muted: #a1a1aa;
+            --border: #1e1e1e;
+            --sidebar-width: 260px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-white); display: flex; height: 100vh; overflow: hidden; }
+        a { text-decoration: none; }
+
+        /* --- SIDEBAR (Standardized for SpaceStudy) --- */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--bg-sidebar); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 25px 0; 
+        }
+
+        .sidebar-logo {
+            font-size: 26px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 30px;
+            padding-left: 20px;
+            letter-spacing: -0.5px;
+        }
+        .sidebar-logo span { color: var(--primary); } 
+
+        .sidebar-menu { list-style: none; padding: 0 10px; display: flex; flex-direction: column; gap: 2px; }
+        .nav-link { 
+            padding: 12px 15px; 
+            margin-bottom: 5px; 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            font-size: 15px; 
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        .nav-link i { width: 20px; text-align: center; font-size: 16px; }
+        
+        .nav-link:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+        .nav-link.active { 
+            background: rgba(99, 102, 241, 0.15); 
+            color: white; 
+            border-left: 3px solid var(--primary); 
+            border-radius: 0 12px 12px 0;
+            margin-left: -10px;
+            padding-left: 22px;
+        }
+
+        /* --- CONTENT --- */
+        .content { flex: 1; padding: 40px; overflow-y: auto; }
+        .charts-row { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; margin-bottom: 30px; }
+        .chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px; }
+        .chart-container { height: 300px; position: relative; }
+
+        .stats-list { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 25px; }
+        .stats-item { display: flex; justify-content: space-between; padding: 18px 0; border-bottom: 1px solid var(--border); }
+        .stats-item:last-child { border-bottom: none; }
+        .stats-value { font-weight: 700; color: white; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-logo" style="display: flex; align-items: center;">
+            <img src="logo.png" alt="SpaceStudy Logo" style="width: 32px; height: 32px; margin-right: 12px; border-radius: 8px;">
+            <div><span>S</span>paceStudy</div>
+        </div>
+        
+        <nav class="sidebar-menu">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-layer-group" style="color: #3b82f6;"></i> Dashboard
+            </a>
+            <a href="subject.html" class="nav-link">
+                <i class="fas fa-book" style="color: #22c55e;"></i> Subjects
+            </a>
+            <a href="ai-assistant.html" class="nav-link">
+                <i class="fas fa-robot" style="color: #ec4899;"></i> AI Assistant
+            </a>
+            <a href="tasks.html" class="nav-link">
+                <i class="fas fa-check-square" style="color: #10b981;"></i> Tasks
+            </a>
+            <a href="timer.html" class="nav-link">
+                <i class="fas fa-stopwatch" style="color: #f43f5e;"></i> Study Timer
+            </a>
+            <a href="analytics.html" class="nav-link active">
+                <i class="fas fa-chart-line" style="color: #818cf8;"></i> Analytics
+            </a>
+        </nav>
+    </aside>
+    
+    <main class="content">
+        <div class="charts-row">
+            <div class="chart-card">
+                <h3>Grade History</h3>
+                <div class="chart-container"><canvas id="gradeHistoryChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Subject Averages</h3>
+                <div class="chart-container"><canvas id="subjectAvgChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="stats-list">
+            <h3>Study Stats</h3>
+            <div class="stats-item"><span>🏆 Best Subject</span><span class="stats-value" id="bestSub">N/A</span></div>
+            <div class="stats-item"><span>📈 Needs Work</span><span class="stats-value" id="worstSub">N/A</span></div>
+            <div class="stats-item"><span>✅ Tasks Done</span><span class="stats-value" id="taskRatio">0 / 0</span></div>
+            <div class="stats-item"><span>⏱️ Total Study Time</span><span class="stats-value" id="totalTime">0h 0m</span></div>
+            <div class="stats-item"><span>🔥 Streak</span><span class="stats-value" id="streakVal">0 days</span></div>
+        </div>
+    </main>
+
+    <script>
+    function updateAnalytics() {
+        const subjects = JSON.parse(localStorage.getItem('ss_user_subjects')) || [];
+        const tasks = JSON.parse(localStorage.getItem('ss_user_tasks')) || [];
+        const studySeconds = parseInt(localStorage.getItem('ss_total_study_seconds')) || 0;
+        
+        // --- THE STREAK FIX ---
+        let streak = parseInt(localStorage.getItem('ss_day_streak')) || 0;
+        const lastDateStr = localStorage.getItem('ss_last_study_date');
+        
+        if (lastDateStr) {
+            const today = new Date().setHours(0,0,0,0);
+            const lastStudy = new Date(lastDateStr).setHours(0,0,0,0);
+            const diffDays = Math.floor((today - lastStudy) / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 1) {
+                streak = 0; // Reset if you missed more than 1 day
+                localStorage.setItem('ss_day_streak', 0);
+            }
+        }
+
+        // Display Stats
+        document.getElementById('streakVal').innerText = `${streak} days`;
+        document.getElementById('totalTime').innerText = `${Math.floor(studySeconds/3600)}h ${Math.floor((studySeconds%3600)/60)}m`;
+        document.getElementById('taskRatio').innerText = `${tasks.filter(t => t.completed).length} / ${tasks.length}`;
+
+        // Best/Worst Calculation
+        let validSubjects = subjects.map(s => {
+            if(!s.grades || s.grades.length === 0) return null;
+            let avg = s.grades.reduce((a,b) => a + Number(b.percentage), 0) / s.grades.length;
+            return { name: s.name, avg: avg };
+        }).filter(s => s !== null);
+
+        if(validSubjects.length > 0) {
+            validSubjects.sort((a,b) => b.avg - a.avg);
+            document.getElementById('bestSub').innerText = `${validSubjects[0].name} (${Math.round(validSubjects[0].avg)}%)`;
+            document.getElementById('worstSub').innerText = `${validSubjects[validSubjects.length-1].name} (${Math.round(validSubjects[validSubjects.length-1].avg)}%)`;
+        }
+
+        renderCharts(subjects);
+    }
+
+    function renderCharts(subjects) {
+        // Bar Chart
+        new Chart(document.getElementById('subjectAvgChart'), {
+            type: 'bar',
+            data: {
+                labels: subjects.map(s => s.name),
+                datasets: [{
+                    data: subjects.map(s => s.grades?.length ? s.grades.reduce((a,b)=>a+Number(b.percentage),0)/s.grades.length : 0),
+                    backgroundColor: '#6366f1', borderRadius: 8
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // Line Chart (simplified)
+        let allDates = [...new Set(subjects.flatMap(s => s.grades?.map(g => g.date) || []))].sort();
+        new Chart(document.getElementById('gradeHistoryChart'), {
+            type: 'line',
+            data: {
+                labels: allDates,
+                datasets: subjects.map((s, i) => ({
+                    label: s.name,
+                    data: allDates.map(d => s.grades?.find(g => g.date === d)?.percentage || null),
+                    borderColor: ['#818cf8', '#f472b6', '#fb7185'][i % 3],
+                    spanGaps: true
+                }))
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    window.onload = updateAnalytics;
+    </script>
+<script src="aura-plugin.js"></script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SStudy - Neural Flashcards</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-sidebar: #050505; --bg-main: #0a0a0a; --bg-card: #121212;    
+            --primary: #818cf8; --primary-hover: #6366f1; --text-white: #ffffff;
+            --text-muted: #a1a1aa; --border: #1e1e1e; --sidebar-width: 260px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-white); display: flex; height: 100vh; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        .sidebar { width: var(--sidebar-width); background-color: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px 0; flex-shrink: 0; }
+        .sidebar-logo { font-size: 26px; font-weight: 800; color: white; margin-bottom: 30px; padding-left: 20px; letter-spacing: -0.5px; display: flex; align-items: center; }
+        .sidebar-logo span { color: var(--primary); } 
+        .sidebar-menu { list-style: none; padding: 0 10px; display: flex; flex-direction: column; gap: 2px; }
+        .nav-link { padding: 12px 15px; margin-bottom: 5px; border-radius: 12px; display: flex; align-items: center; gap: 15px; color: var(--text-muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: 0.2s; }
+        .nav-link i { width: 20px; text-align: center; font-size: 16px; }
+        .nav-link:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+        .nav-link.active { background: rgba(129, 140, 248, 0.1); color: white; border-left: 3px solid var(--primary); border-radius: 0 12px 12px 0; margin-left: -10px; padding-left: 22px; }
+
+        .content { flex: 1; padding: 30px 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow-y: auto; }
+        
+        /* --- HUB UI --- */
+        .hub-container { width: 100%; max-width: 550px; background: var(--bg-card); border: 1px solid var(--border); padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .hub-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+        .hub-subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
+        
+        .label-group { font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 12px; display: block; text-align: left; }
+        .toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 25px; }
+        
+        .toggle-btn { background: #141414; border: 1px solid var(--border); color: var(--text-muted); padding: 16px; border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 8px; transition: 0.2s; font-weight: 600; font-size: 14px; }
+        .toggle-btn i { font-size: 18px; }
+        .toggle-btn.active { background: rgba(129, 140, 248, 0.1); border-color: var(--primary); color: white; }
+
+        .topic-input { width: 100%; background: #000; border: 1px solid var(--border); padding: 18px; border-radius: 12px; color: white; font-size: 16px; margin-bottom: 25px; outline: none; }
+        .topic-input:focus { border-color: var(--primary); box-shadow: 0 0 15px rgba(129, 140, 248, 0.2); }
+
+        .btn-gen { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s; }
+        .btn-gen:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .btn-gen:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* --- STUDY VIEW --- */
+        #study-view { display: none; width: 100%; max-width: 600px; text-align: center; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .flashcard { height: 400px; perspective: 1000px; cursor: pointer; margin-bottom: 30px; }
+        .card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+        .flashcard.flipped .card-inner { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 45px; border-radius: 30px; background: #0a0a0a; border: 2px solid rgba(129, 140, 248, 0.2); box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+        .card-back { transform: rotateY(180deg); color: var(--primary); border-color: var(--primary); }
+        .card-label { font-size: 10px; text-transform: uppercase; color: var(--primary); letter-spacing: 3px; margin-bottom: 25px; font-weight: 800; opacity: 0.7; }
+        .card-text { font-size: 22px; font-weight: 600; line-height: 1.5; }
+
+        .back-nav { position: absolute; top: 30px; left: 40px; color: var(--text-muted); text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px; z-index: 10; }
+        #loading-overlay { display: none; margin-top: 15px; color: var(--primary); font-weight: 600; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="logo.png" alt="" style="width: 32px; height: 32px; margin-right: 12px; border-radius: 8px;" onerror="this.style.display='none'">
+            <div><span>S</span>paceStudy</div>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="dashboard.html" class="nav-link"><i class="fas fa-layer-group" style="color: #3b82f6;"></i> Dashboard</a>
+            <a href="subject.html" class="nav-link active"><i class="fas fa-book" style="color: #22c55e;"></i> Subjects</a>
+            <a href="tasks.html" class="nav-link"><i class="fas fa-check-square" style="color: #10b981;"></i> Tasks</a>
+            <a href="timer.html" class="nav-link"><i class="fas fa-stopwatch" style="color: #f43f5e;"></i> Study Timer</a>
+            <a href="analytics.html" class="nav-link"><i class="fas fa-chart-line" style="color: #818cf8;"></i> Analytics</a>
+        </nav>
+    </aside>
+
+    <main class="content">
+        <a href="#" id="backLink" class="back-nav"><i class="fas fa-arrow-left"></i> Back to <span id="backName">Vault</span></a>
+
+        <div id="hub-view" class="hub-container">
+            <h1 class="hub-title">Neural Flashcards</h1>
+            <p class="hub-subtitle">High-retention active recall using Google Gemini 2.0</p>
+
+            <span class="label-group">Knowledge Base</span>
+            <div class="toggle-grid">
+                <div class="toggle-btn active" id="src-ai" onclick="setSource('ai')"><i class="fas fa-microchip"></i> AI Topic</div>
+                <div class="toggle-btn" id="src-vault" onclick="setSource('vault')"><i class="fas fa-vault"></i> My Vault</div>
+            </div>
+
+            <span class="label-group">Cognitive Mode</span>
+            <div class="toggle-grid">
+                <div class="toggle-btn active" id="mode-memo" onclick="setMode('memo')"><i class="fas fa-eye"></i> Memorize</div>
+                <div class="toggle-btn" id="mode-quiz" onclick="setMode('quiz')"><i class="fas fa-bolt"></i> Quiz</div>
+            </div>
+
+            <input type="text" id="topicInput" class="topic-input" placeholder="What do you want to learn?">
+
+            <button class="btn-gen" id="genBtn" onclick="generateAIDeck()">Initialize Neural Deck</button>
+            <div id="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Brainstorming neural cards...</div>
+        </div>
+
+        <div id="study-view">
+            <div class="flashcard" id="card" onclick="this.classList.toggle('flipped')">
+                <div class="card-inner">
+                    <div class="card-face card-front"><span class="card-label">Question</span><div class="card-text" id="qText"></div></div>
+                    <div class="card-face card-back"><span class="card-label">Answer</span><div class="card-text" id="aText"></div></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 20px; justify-content: center; align-items: center;">
+                <button class="toggle-btn" style="width: 60px; height: 60px; border-radius: 50%" onclick="prevCard()"><i class="fas fa-chevron-left"></i></button>
+                <span id="counter" style="color: var(--text-muted); font-weight: 700;">1 / 20</span>
+                <button class="toggle-btn" style="width: 60px; height: 60px; border-radius: 50%" onclick="nextCard()"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <button class="toggle-btn" style="margin-top: 30px; width: 100%; border-style: dashed;" onclick="location.reload()">End Session</button>
+        </div>
+    </main>
+
+    <script>
+        const API_KEY = "AIzaSyBR5P6_QYmbdL45I1JFB2foA3oSxfcKJ7E";
+        const params = new URLSearchParams(window.location.search);
+        const subjectName = params.get('sub') || "General";
+        
+        document.getElementById('backName').innerText = subjectName;
+        document.getElementById('topicInput').value = subjectName;
+        document.getElementById('backLink').href = `subject-details.html?sub=${encodeURIComponent(subjectName)}`;
+
+        let currentSource = 'ai';
+        let currentMode = 'memo';
+        let deck = [];
+        let index = 0;
+
+        function setSource(s) {
+            currentSource = s;
+            document.getElementById('src-ai').classList.toggle('active', s === 'ai');
+            document.getElementById('src-vault').classList.toggle('active', s === 'vault');
+        }
+
+        function setMode(m) {
+            currentMode = m;
+            document.getElementById('mode-memo').classList.toggle('active', m === 'memo');
+            document.getElementById('mode-quiz').classList.toggle('active', m === 'quiz');
+        }
+
+        async function generateAIDeck() {
+            const topic = document.getElementById('topicInput').value;
+            const btn = document.getElementById('genBtn');
+            const loader = document.getElementById('loading-overlay');
+            
+            let sourceContext = `the topic: ${topic}`;
+            
+            if (currentSource === 'vault') {
+                const rawSubjects = localStorage.getItem('ss_user_subjects');
+                if (rawSubjects) {
+                    const subjects = JSON.parse(rawSubjects);
+                    const currentSubData = subjects.find(s => s.name === subjectName);
+                    
+                    if (currentSubData && currentSubData.notes && currentSubData.notes.length > 0) {
+                        const combinedNotes = currentSubData.notes.map(n => n.body).join("\n\n");
+                        sourceContext = `these specific user notes: "${combinedNotes}"`;
+                    }
+                }
+            }
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+
+            // Very strictly enforcing the q and a keys
+            const prompt = `Create exactly 20 flashcards based on ${sourceContext}. Mode: ${currentMode === 'quiz' ? 'Challenging questions' : 'Simple facts'}. Response MUST BE ONLY a JSON array. You MUST use exactly the keys "q" and "a". Format: [{"q": "...", "a": "..."}]`;
+
+            try {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const data = await resp.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                const rawText = data.candidates[0].content.parts[0].text;
+                const cleanJson = rawText.substring(rawText.indexOf("["), rawText.lastIndexOf("]") + 1);
+                const parsedData = JSON.parse(cleanJson);
+                
+                // THE FIX: Safety fallback just in case the AI ignores the prompt and uses "question" and "answer"
+                deck = parsedData.map(item => ({
+                    q: item.q || item.question || item.front || "Error: Question missing",
+                    a: item.a || item.answer || item.back || "Error: Answer missing"
+                }));
+                
+                document.getElementById('hub-view').style.display = 'none';
+                document.getElementById('study-view').style.display = 'block';
+                index = 0;
+                renderCard();
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        function renderCard() {
+            document.getElementById('card').classList.remove('flipped');
+            document.getElementById('qText').innerText = deck[index].q;
+            document.getElementById('aText').innerText = deck[index].a;
+            document.getElementById('counter').innerText = `${index + 1} / ${deck.length}`;
+        }
+
+        function nextCard() { if (index < deck.length - 1) { index++; renderCard(); } }
+        function prevCard() { if (index > 0) { index--; renderCard(); } }
+    </script>
+<script src="aura-plugin.js"></script>
+</body>
+</html>
