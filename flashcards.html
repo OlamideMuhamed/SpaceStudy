@@ -18,9 +18,9 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background-color: var(--bg-main); color: var(--text-white); display: flex; height: 100vh; overflow: hidden; }
 
-        /* --- SIDEBAR --- */
         .sidebar { width: var(--sidebar-width); background-color: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 25px 0; flex-shrink: 0; }
         .sidebar-logo { font-size: 26px; font-weight: 800; color: white; margin-bottom: 30px; padding-left: 20px; letter-spacing: -0.5px; display: flex; align-items: center; }
+        .sidebar-logo i { color: var(--primary); font-size: 26px; margin-right: 12px; }
         .sidebar-logo span { color: var(--primary); } 
         .sidebar-menu { list-style: none; padding: 0 10px; display: flex; flex-direction: column; gap: 2px; }
         .nav-link { padding: 12px 15px; margin-bottom: 5px; border-radius: 12px; display: flex; align-items: center; gap: 15px; color: var(--text-muted); text-decoration: none; font-size: 15px; font-weight: 500; transition: 0.2s; }
@@ -30,7 +30,6 @@
 
         .content { flex: 1; padding: 30px 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow-y: auto; }
         
-        /* --- HUB UI --- */
         .hub-container { width: 100%; max-width: 550px; background: var(--bg-card); border: 1px solid var(--border); padding: 40px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
         .hub-title { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
         .hub-subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 30px; }
@@ -49,7 +48,6 @@
         .btn-gen:hover { background: var(--primary-hover); transform: translateY(-2px); }
         .btn-gen:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* --- STUDY VIEW --- */
         #study-view { display: none; width: 100%; max-width: 600px; text-align: center; animation: fadeIn 0.5s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -69,7 +67,7 @@
 
     <aside class="sidebar">
         <div class="sidebar-logo">
-            <img src="logo.png" alt="" style="width: 32px; height: 32px; margin-right: 12px; border-radius: 8px;" onerror="this.style.display='none'">
+            <i class="fas fa-rocket"></i>
             <div><span>S</span>paceStudy</div>
         </div>
         <nav class="sidebar-menu">
@@ -119,19 +117,17 @@
                 <span id="counter" style="color: var(--text-muted); font-weight: 700;">1 / 20</span>
                 <button class="toggle-btn" style="width: 60px; height: 60px; border-radius: 50%" onclick="nextCard()"><i class="fas fa-chevron-right"></i></button>
             </div>
-            <button class="toggle-btn" style="margin-top: 30px; width: 100%; border-style: dashed;" onclick="location.reload()">End Session</button>
+            
+            <button class="toggle-btn" style="margin-top: 30px; width: 100%; border-style: dashed;" onclick="backToHub()">Back to Hub (Keep Deck)</button>
+            <button class="toggle-btn" style="margin-top: 10px; width: 100%; border-color: #ef4444; color: #ef4444;" onclick="deleteDeck()">Delete Current Deck</button>
         </div>
     </main>
 
     <script>
-        // Use the saved API key just like the AI Assistant page does!
         let API_KEY = localStorage.getItem("sstudy_gemini_key");
-        
         if (!API_KEY || API_KEY === "null") {
             API_KEY = prompt("Please enter your Gemini AI API Key to use Flashcards:");
-            if (API_KEY) {
-                localStorage.setItem("sstudy_gemini_key", API_KEY);
-            }
+            if (API_KEY) localStorage.setItem("sstudy_gemini_key", API_KEY);
         }
 
         const params = new URLSearchParams(window.location.search);
@@ -145,6 +141,20 @@
         let currentMode = 'memo';
         let deck = [];
         let index = 0;
+
+        // LOAD SAVED DECK FOR THIS SUBJECT
+        window.onload = () => {
+            const savedDeck = localStorage.getItem('ss_deck_' + subjectName);
+            if (savedDeck) {
+                deck = JSON.parse(savedDeck);
+                if (deck.length > 0) {
+                    document.getElementById('hub-view').style.display = 'none';
+                    document.getElementById('study-view').style.display = 'block';
+                    index = 0;
+                    renderCard();
+                }
+            }
+        };
 
         function setSource(s) {
             currentSource = s;
@@ -162,7 +172,6 @@
             const topic = document.getElementById('topicInput').value;
             const btn = document.getElementById('genBtn');
             const loader = document.getElementById('loading-overlay');
-            
             let sourceContext = `the topic: ${topic}`;
             
             if (currentSource === 'vault') {
@@ -170,7 +179,6 @@
                 if (rawSubjects) {
                     const subjects = JSON.parse(rawSubjects);
                     const currentSubData = subjects.find(s => s.name === subjectName);
-                    
                     if (currentSubData && currentSubData.notes && currentSubData.notes.length > 0) {
                         const combinedNotes = currentSubData.notes.map(n => n.body).join("\n\n");
                         sourceContext = `these specific user notes: "${combinedNotes}"`;
@@ -178,26 +186,20 @@
                 }
             }
 
-            btn.disabled = true;
-            loader.style.display = 'block';
+            btn.disabled = true; loader.style.display = 'block';
 
             const prompt = `Create exactly 20 flashcards based on ${sourceContext}. Mode: ${currentMode === 'quiz' ? 'Challenging questions' : 'Simple facts'}. Response MUST BE ONLY a JSON array. You MUST use exactly the keys "q" and "a". Format: [{"q": "...", "a": "..."}]`;
 
             try {
                 if (!API_KEY) throw new Error("Missing API Key!");
 
-                // Updated to match the working model from your AI assistant page
                 const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
 
                 const data = await resp.json();
-                
-                if (data.error) {
-                    throw new Error(data.error.message);
-                }
+                if (data.error) throw new Error(data.error.message);
 
                 const rawText = data.candidates[0].content.parts[0].text;
                 const cleanJson = rawText.substring(rawText.indexOf("["), rawText.lastIndexOf("]") + 1);
@@ -208,16 +210,17 @@
                     a: item.a || item.answer || item.back || "Error: Answer missing"
                 }));
                 
+                // SAVE DECK LOCALLY
+                localStorage.setItem('ss_deck_' + subjectName, JSON.stringify(deck));
+
                 document.getElementById('hub-view').style.display = 'none';
                 document.getElementById('study-view').style.display = 'block';
                 index = 0;
                 renderCard();
             } catch (err) {
-                console.error(err);
-                alert("Error: " + err.message);
+                console.error(err); alert("Error: " + err.message);
             } finally {
-                btn.disabled = false;
-                loader.style.display = 'none';
+                btn.disabled = false; loader.style.display = 'none';
             }
         }
 
@@ -230,6 +233,18 @@
 
         function nextCard() { if (index < deck.length - 1) { index++; renderCard(); } }
         function prevCard() { if (index > 0) { index--; renderCard(); } }
+
+        function backToHub() {
+            document.getElementById('study-view').style.display = 'none';
+            document.getElementById('hub-view').style.display = 'block';
+        }
+
+        function deleteDeck() {
+            if(confirm("Are you sure you want to delete this deck? You will need to generate a new one.")) {
+                localStorage.removeItem('ss_deck_' + subjectName);
+                location.reload();
+            }
+        }
     </script>
 <script src="aura-plugin.js"></script>
 </body>
