@@ -75,6 +75,7 @@
         <nav class="sidebar-menu">
             <a href="dashboard.html" class="nav-link"><i class="fas fa-layer-group" style="color: #3b82f6;"></i> Dashboard</a>
             <a href="subject.html" class="nav-link active"><i class="fas fa-book" style="color: #22c55e;"></i> Subjects</a>
+            <a href="ai-assistant.html" class="nav-link"><i class="fas fa-robot" style="color: #ec4899;"></i> AI Assistant</a>
             <a href="tasks.html" class="nav-link"><i class="fas fa-check-square" style="color: #10b981;"></i> Tasks</a>
             <a href="timer.html" class="nav-link"><i class="fas fa-stopwatch" style="color: #f43f5e;"></i> Study Timer</a>
             <a href="analytics.html" class="nav-link"><i class="fas fa-chart-line" style="color: #818cf8;"></i> Analytics</a>
@@ -86,7 +87,7 @@
 
         <div id="hub-view" class="hub-container">
             <h1 class="hub-title">Neural Flashcards</h1>
-            <p class="hub-subtitle">High-retention active recall using Google Gemini 2.0</p>
+            <p class="hub-subtitle">High-retention active recall using Google Gemini</p>
 
             <span class="label-group">Knowledge Base</span>
             <div class="toggle-grid">
@@ -123,7 +124,16 @@
     </main>
 
     <script>
-        const API_KEY = "AIzaSyBR5P6_QYmbdL45I1JFB2foA3oSxfcKJ7E";
+        // Use the saved API key just like the AI Assistant page does!
+        let API_KEY = localStorage.getItem("sstudy_gemini_key");
+        
+        if (!API_KEY || API_KEY === "null") {
+            API_KEY = prompt("Please enter your Gemini AI API Key to use Flashcards:");
+            if (API_KEY) {
+                localStorage.setItem("sstudy_gemini_key", API_KEY);
+            }
+        }
+
         const params = new URLSearchParams(window.location.search);
         const subjectName = params.get('sub') || "General";
         
@@ -171,11 +181,13 @@
             btn.disabled = true;
             loader.style.display = 'block';
 
-            // Very strictly enforcing the q and a keys
             const prompt = `Create exactly 20 flashcards based on ${sourceContext}. Mode: ${currentMode === 'quiz' ? 'Challenging questions' : 'Simple facts'}. Response MUST BE ONLY a JSON array. You MUST use exactly the keys "q" and "a". Format: [{"q": "...", "a": "..."}]`;
 
             try {
-                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+                if (!API_KEY) throw new Error("Missing API Key!");
+
+                // Updated to match the working model from your AI assistant page
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
@@ -191,7 +203,6 @@
                 const cleanJson = rawText.substring(rawText.indexOf("["), rawText.lastIndexOf("]") + 1);
                 const parsedData = JSON.parse(cleanJson);
                 
-                // THE FIX: Safety fallback just in case the AI ignores the prompt and uses "question" and "answer"
                 deck = parsedData.map(item => ({
                     q: item.q || item.question || item.front || "Error: Question missing",
                     a: item.a || item.answer || item.back || "Error: Answer missing"
